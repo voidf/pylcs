@@ -79,8 +79,10 @@ class BuildExt(build_ext):
             opts.append(cpp_flag(self.compiler))
             if has_flag(self.compiler, '-fvisibility=hidden'):
                 opts.append('-fvisibility=hidden')
+            opts.append('-O3')
         elif ct == 'msvc':
             opts.append('/DVERSION_INFO=\\"%s\\"' % self.distribution.get_version())
+            opts.append('/O2')
         for ext in self.extensions:
             ext.extra_compile_args = opts
         build_ext.build_extensions(self)
