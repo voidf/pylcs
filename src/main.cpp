@@ -6,6 +6,7 @@
 #include <string.h>
 #include <sstream>
 #include <algorithm>
+#include <unordered_map>
 using namespace std;
 
 vector<string> utf8_split(const string &str){
@@ -51,7 +52,50 @@ int lcs_sequence_length(const string &str1, const string &str2) {
     return dp[n];
 }
 
+// 我们用到的核心代码，我只优化这个，这一版内存是O(n)的
+vector<int> lcs_sequence_idx(const string &str, const string &ref) {
+    /***
+     * Hunt-Szymanski Algorithm for LCS
+     *
+     * Complexity: O(R + N) log N
+     * R = numbered of ordered pairs of positions where the two strings match (worst case, R = N^2)
+     *
+     * copied from https://github.com/sgtlaugh/algovault/blob/0ba0b3eb0d2e31e78de05da188f13d8d7d0365ae/code_library/hunt_szymanski.cpp
+     ***/
+    vector<string> A = utf8_split(str);
+    vector<string> B = utf8_split(ref);
+    
+    unordered_map<string, vector<int>> adj; // 均摊O(B.size())，当然实际可能会大一点但是绝对不会达到A*B
+    int i, j, n = A.size(), m = B.size();
+    if (m == 0 || n == 0)
+        return vector<int>(A.size(), -1);
 
+    for (i = 0; i < m; i++)
+        adj[B[i]].push_back(i);
+    vector<int> ar{-1};
+    ar.reserve(A.size());
+    for (i = 0; i < n; i++)
+    {
+        for (j = (int)adj[A[i]].size() - 1; j >= 0; j--) // 对于英文字符来说，这种方法不一定很优，因为每个adj的桶里的内容都很多，但是对于中文字符来说这种做法很可能很快
+        {
+            int x = adj[A[i]][j];
+            if (x > ar.back())
+                ar.emplace_back(x);
+            else
+                ar[lower_bound(ar.begin(), ar.end(), x) - ar.begin()] = x; // 最坏情况出现在A串和B串都由同一个字符构造而来，这种情况是n*m*log(n)的时间，但是在我们的数据上不可能发生
+        }
+    }
+    vector<int> idx(A.size(), -1);
+
+    j = 1;
+    for(i = 0; i < A.size(); ++i)
+        if(A[i] == B[ar[j]])
+            idx[i] = ar[j++];
+
+    return idx;
+}
+/*
+// 稍微省一点内存的版本
 vector<int> lcs_sequence_idx(const string &str, const string &ref) {
     vector<string> s1 = utf8_split(str);
     vector<string> s2 = utf8_split(ref);
@@ -91,7 +135,7 @@ vector<int> lcs_sequence_idx(const string &str, const string &ref) {
         else i--;
     }
     return res;
-}
+}*/
 
 
 // 最长公共子串（连续）

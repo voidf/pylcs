@@ -92,7 +92,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='pylcs',
-    version='0.0.8',
+    version='0.0.9',
     author='kuangzh',
     author_email='kuangzh@smail.nju.edu.cn',
     url='https://github.com/kuangkzh/pylcs',
