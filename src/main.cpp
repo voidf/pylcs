@@ -11,6 +11,7 @@
 using namespace std;
 
 using ll = int_fast64_t;
+using ui = uint_fast32_t;
 vector<ll> utf8_tokenize(const string &str)
 {
     vector<ll> split;
@@ -85,28 +86,18 @@ int lcs_sequence_length(const string &str1, const string &str2)
 }
 
 // 我们用到的核心代码，我只优化这个
-vector<ll> lcs_sequence_idx(const string &str, const string &ref)
+vector<ll> lcs_isequence_idx(const vector<ui> &A, const vector<ui> &B)
 {
-    /***
-     * Hunt-Szymanski Algorithm for LCS
-     *
-     * Complexity: O(R + N) log N
-     * R = numbered of ordered pairs of positions where the two strings match (worst case, R = N^2)
-     *
-     * copied and modified from https://github.com/sgtlaugh/algovault/blob/0ba0b3eb0d2e31e78de05da188f13d8d7d0365ae/code_library/hunt_szymanski.cpp
-     ***/
-    auto A = utf8_tokenize(str);
-    auto B = utf8_tokenize(ref);
-
-    unordered_map<ll, vector<ll>> adj; // 均摊O(B.size())，当然实际可能会大一点但是绝对不会达到A*B
-    ll i, j, n = A.size(), m = B.size();
-    if (m == 0 || n == 0)
+    // The key of the map should match the type of elements in the vector.
+    unordered_map<ui, vector<ll>> adj; // 均摊O(B.size())，当然实际可能会大一点但是绝对不会达到A*B
+    ll i, j;
+    if (B.size() == 0 || A.size() == 0)
         return vector<ll>(A.size(), -1);
 
-    for (i = 0; i < m; i++)
+    for (i = 0; i < B.size(); i++)
         adj[B[i]].push_back(i); // adj就是论文中的MATCHLIST，这里是升序放进去，我们之后倒序遍历来实现降序访问
 
-    vector<ll> thresh{-1};        // 论文中的THRESH数组
+    vector<ll> thresh{-1};       // 论文中的THRESH数组
     thresh.reserve(A.size() + 1); // 放入虚点，避免傻逼讨论
     // 实现自论文https://cse.hkust.edu.hk/mjg_lib/bibs/DPSu/DPSu.Files/HuSz77.pdf，用两个vector来实现单前向节点链表
     vector<ll> link{0}; // 记前向node号，和thresh数组等长
@@ -121,8 +112,8 @@ vector<ll> lcs_sequence_idx(const string &str, const string &ref)
     // TODO: use UINT_FAST32_MAX
     vector<listnode> linklistnode{listnode{-1, -1}}; // 这个是节点内容，长度等于A和B中元素的匹配数，也就是说最坏还是n^2的，但实际数据远远达不到
     linklistnode.reserve(A.size() + 1);              // 文本对齐的生产数据中（我们有的输入文件长达1MB）直接分n * 2会爆内存，这里先分n的内存
-
-    for (i = 0; i < n; i++)
+    cerr << "A:" << A.size() << " B:" << B.size() << " adj:" << adj.size() << "\n";
+    for (i = 0; i < A.size(); i++)
     {
         for (j = adj[A[i]].size() - 1; j >= 0; j--) // 对于英文字符来说，这种方法不一定很优，因为每个adj的桶里的内容都很多，但是对于中文字符来说这种做法很可能很快，常用的文字有3500个，相当于有3500个桶来匀全文的匹配
         {
@@ -164,48 +155,87 @@ vector<ll> lcs_sequence_idx(const string &str, const string &ref)
     }
     return thresh;
 }
-/*
-// 稍微省一点内存的版本
-vector<int> lcs_sequence_idx(const string &str, const string &ref) {
-    vector<string> s1 = utf8_split(str);
-    vector<string> s2 = utf8_split(ref);
-    int m = s1.size();
-    int n = s2.size();
-    vector<int> dp(n + 1, 0);
-    vector<vector<bool>> direct_r(m, vector<bool>(n, 0));
-    vector<vector<bool>> direct_m(m, vector<bool>(n, 0)); // for space efficiency
-    vector<int> res(m, -1);
-    if (m == 0 || n == 0)
-        return res;
 
-    int i, j;
-    for (i = 1; i <= m; i++) {
-        int prev = 0;
-        for (j = 1; j <= n; j++) {
-            int temp = dp[j];
-            if (s1[i - 1] == s2[j - 1]) {
-                dp[j] = prev + 1;
-                direct_m[i - 1][j - 1] = 1; // match
-            } else {
-                if (dp[j] < dp[j - 1]) {
-                    dp[j] = dp[j - 1];
-                    direct_r[i - 1][j - 1] = 1; // str+1
-                }
-                    // direct_r = 1;     // ref+1
+// 我们用到的核心代码，我只优化这个
+vector<ll> lcs_sequence_idx(const string &str, const string &ref)
+{
+    /***
+     * Hunt-Szymanski Algorithm for LCS
+     *
+     * Complexity: O(R + N) log N
+     * R = numbered of ordered pairs of positions where the two strings match (worst case, R = N^2)
+     *
+     * copied and modified from https://github.com/sgtlaugh/algovault/blob/0ba0b3eb0d2e31e78de05da188f13d8d7d0365ae/code_library/hunt_szymanski.cpp
+     ***/
+    auto A = utf8_tokenize(str);
+    auto B = utf8_tokenize(ref);
+
+    unordered_map<ll, vector<ll>> adj; // 均摊O(B.size())，当然实际可能会大一点但是绝对不会达到A*B
+    ll i, j;
+    if (B.size() == 0 || A.size() == 0)
+        return vector<ll>(A.size(), -1);
+
+    for (i = 0; i < B.size(); i++)
+        adj[B[i]].push_back(i); // adj就是论文中的MATCHLIST，这里是升序放进去，我们之后倒序遍历来实现降序访问
+
+    vector<ll> thresh{-1};        // 论文中的THRESH数组
+    thresh.reserve(A.size() + 1); // 放入虚点，避免傻逼讨论
+    // 实现自论文https://cse.hkust.edu.hk/mjg_lib/bibs/DPSu/DPSu.Files/HuSz77.pdf，用两个vector来实现单前向节点链表
+    vector<ll> link{0}; // 记前向node号，和thresh数组等长
+    link.reserve(A.size() + 1);
+
+    struct listnode
+    {
+        ll b_index;
+        ll prv; // 指向linklistnode中上一个元素的下标，考虑到指针会大一倍，这里不用指针
+        listnode(ll a, ll b) : b_index(a), prv(b) {}
+    };
+    // TODO: use UINT_FAST32_MAX
+    vector<listnode> linklistnode{listnode{-1, -1}}; // 这个是节点内容，长度等于A和B中元素的匹配数，也就是说最坏还是n^2的，但实际数据远远达不到
+    linklistnode.reserve(A.size() + 1);              // 文本对齐的生产数据中（我们有的输入文件长达1MB）直接分n * 2会爆内存，这里先分n的内存
+
+    for (i = 0; i < A.size(); i++)
+    {
+        for (j = adj[A[i]].size() - 1; j >= 0; j--) // 对于英文字符来说，这种方法不一定很优，因为每个adj的桶里的内容都很多，但是对于中文字符来说这种做法很可能很快，常用的文字有3500个，相当于有3500个桶来匀全文的匹配
+        {
+            auto x = adj[A[i]][j];
+            if (x > thresh.back())
+            {
+                thresh.emplace_back(x);
+                // 放入listnode
+                linklistnode.emplace_back(x, link.back());
+                link.emplace_back(linklistnode.size() - 1);
             }
-            prev = temp;
+            else
+            {
+                auto insert_pos = lower_bound(thresh.begin(), thresh.end(), x) - thresh.begin(); // thresh虽然冗余但是去掉会需要写比较tricky的lambda，影响性能
+                thresh[insert_pos] = x;                                                          // 最坏情况出现在A串和B串都由同一个字符构造而来，这种情况是n*m*log(n)的时间，但是在我们的数据上不可能发生
+
+                linklistnode.emplace_back(x, link[insert_pos - 1]);
+                link[insert_pos] = linklistnode.size() - 1;
+            }
         }
     }
-    for (i = m, j = n; i > 0 && j > 0; ){
-        if (direct_m[i - 1][j - 1]){
-            res[i-1] = j-1;
-            i--; j--;
+    // if (linklistnode.size() > 4294967295ULL)
+    if (linklistnode.size() > 2147483647ULL)
+        cerr << "A:" << A.size() << " B:" << B.size() << " LLN:" << linklistnode.size() << "\n";
+    // 我们复用thresh数组的空间来输出
+    thresh.assign(A.size(), -1);
+    thresh.resize(A.size());
+
+    j = link.back();
+    for (i = A.size() - 1; i >= 0; --i)
+    {
+        if (linklistnode[j].prv < 0)
+            break;
+        if (A[i] == B[linklistnode[j].b_index])
+        {
+            thresh[i] = linklistnode[j].b_index;
+            j = linklistnode[j].prv;
         }
-        else if (direct_r[i - 1][j - 1]) j--;
-        else i--;
     }
-    return res;
-}*/
+    return thresh;
+}
 
 // 最长公共子串（连续）
 int lcs_string_length(const string &str1, const string &str2)
@@ -486,6 +516,8 @@ PYBIND11_MODULE(pylcs, m)
     m.def("lcs_sequence_length", &lcs_sequence_length, R"pbdoc(Longest common subsequence)pbdoc");
     m.def("lcs_sequence_idx", &lcs_sequence_idx, R"pbdoc(Longest common subsequence indices mapping from str to ref)pbdoc",
           py::arg("s"), py::arg("ref"));
+    m.def("lcs_isequence_idx", &lcs_isequence_idx, R"pbdoc(Longest common subsequence indices mapping for integer sequences)pbdoc",
+        py::arg("seq1"), py::arg("seq2"));
     m.def("lcs_of_list", &lcs_sequence_of_list, R"pbdoc(Longest common subsequence of list)pbdoc");
     m.def("lcs_sequence_of_list", &lcs_sequence_of_list, R"pbdoc(Longest common subsequence of list)pbdoc");
 
