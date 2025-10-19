@@ -111,7 +111,7 @@ vector<ll> lcs_isequence_idx(const vector<ui> &A, const vector<ui> &B)
     };
     // TODO: use UINT_FAST32_MAX
     vector<listnode> linklistnode{listnode{-1, -1}}; // 这个是节点内容，长度等于A和B中元素的匹配数，也就是说最坏还是n^2的，但实际数据远远达不到
-    linklistnode.reserve(A.size() + 1);              // 文本对齐的生产数据中（我们有的输入文件长达1MB）直接分n * 2会爆内存，这里先分n的内存
+    linklistnode.reserve(A.size() + 1LL);              // 文本对齐的生产数据中（我们有的输入文件长达1MB）直接分n * 2会爆内存，这里先分n的内存
     cerr << "A:" << A.size() << " B:" << B.size() << " adj:" << adj.size() << "\n";
     for (i = 0; i < A.size(); i++)
     {
@@ -137,7 +137,7 @@ vector<ll> lcs_isequence_idx(const vector<ui> &A, const vector<ui> &B)
     }
     // if (linklistnode.size() > 4294967295ULL)
     if (linklistnode.size() > 2147483647ULL)
-        cerr << "A:" << A.size() << " B:" << B.size() << " LLN:" << linklistnode.size() << "\n";
+        cerr << "A:" << A.size() << " B:" << B.size() << " LLN:" << linklistnode.size() << " LLNS:" << linklistnode.capacity() << "\n";
     // 我们复用thresh数组的空间来输出
     thresh.assign(A.size(), -1);
     thresh.resize(A.size());
