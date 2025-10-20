@@ -135,9 +135,11 @@ vector<ll> lcs_isequence_idx(const vector<ui> &A, const vector<ui> &B)
             }
         }
     }
-    // if (linklistnode.size() > 4294967295ULL)
-    if (linklistnode.size() > 2147483647ULL)
-        cerr << "A:" << A.size() << " B:" << B.size() << " LLN:" << linklistnode.size() << " LLNS:" << linklistnode.capacity() << "\n";
+    if (linklistnode.size() > 4294967295ULL)
+        cerr << "[WARNING EXCEED UNSIGNED INT ?????]";
+    else if (linklistnode.size() > 2147483647ULL)
+        cerr << "[WARNING EXCEED INT !!!!!]";
+    cerr << "A:" << A.size() << " B:" << B.size() << " LLN:" << linklistnode.size() << " LLNS:" << linklistnode.capacity() << "\n";
     // 我们复用thresh数组的空间来输出
     thresh.assign(A.size(), -1);
     thresh.resize(A.size());
