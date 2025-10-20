@@ -91,55 +91,70 @@ vector<ll> lcs_isequence_idx(const vector<ui> &A, const vector<ui> &B)
     // The key of the map should match the type of elements in the vector.
     unordered_map<ui, vector<ll>> adj; // 均摊O(B.size())，当然实际可能会大一点但是绝对不会达到A*B
     ll i, j;
-    if (B.size() == 0 || A.size() == 0)
-        return vector<ll>(A.size(), -1);
+    if (B.size() > UINT_FAST32_MAX)
+    {
+        cerr << "[ERROR!] DETECT B SIZE LARGER THAN " << UINT_FAST32_MAX << " :" << B.size() << "\n";
+        exit(1);
+    }
+    if (B.size() == 0LL || A.size() == 0LL)
+        return vector<ll>(A.size(), -1LL);
 
-    for (i = 0; i < B.size(); i++)
+    for (i = 0LL; i < B.size(); i++)
         adj[B[i]].push_back(i); // adj就是论文中的MATCHLIST，这里是升序放进去，我们之后倒序遍历来实现降序访问
 
-    vector<ll> thresh{-1};       // 论文中的THRESH数组
-    thresh.reserve(A.size() + 1); // 放入虚点，避免傻逼讨论
+    vector<ll> thresh{-1LL};       // 论文中的THRESH数组
+    thresh.reserve(A.size() + 1LL); // 放入虚点，避免傻逼讨论
     // 实现自论文https://cse.hkust.edu.hk/mjg_lib/bibs/DPSu/DPSu.Files/HuSz77.pdf，用两个vector来实现单前向节点链表
-    vector<ll> link{0}; // 记前向node号，和thresh数组等长
-    link.reserve(A.size() + 1);
+    vector<ll> link{0LL}; // 记前向node号，和thresh数组等长
+    link.reserve(A.size() + 1LL);
 
-    struct listnode
-    {
-        ll b_index;
-        ll prv; // 指向linklistnode中上一个元素的下标，考虑到指针会大一倍，这里不用指针
-        listnode(ll a, ll b) : b_index(a), prv(b) {}
-    };
+    // struct listnode
+    // {
+    //     ll b_index;
+    //     ll prv; // 指向linklistnode中上一个元素的下标，考虑到指针会大一倍，这里不用指针
+    //     listnode(ll a, ll b) : b_index(a), prv(b) {}
+    // };
+    // listnode Aos 改成 SoA
+    vector<ui> b_index_arr{UINT_FAST32_MAX};
+    vector<ll> prv_arr{-1LL};
     // TODO: use UINT_FAST32_MAX
-    vector<listnode> linklistnode{listnode{-1, -1}}; // 这个是节点内容，长度等于A和B中元素的匹配数，也就是说最坏还是n^2的，但实际数据远远达不到
-    linklistnode.reserve(A.size() + 1LL);              // 文本对齐的生产数据中（我们有的输入文件长达1MB）直接分n * 2会爆内存，这里先分n的内存
+    // vector<listnode> linklistnode{listnode{-1, -1}}; // 这个是节点内容，长度等于A和B中元素的匹配数，也就是说最坏还是n^2的，但实际数据远远达不到
+    // linklistnode.reserve(A.size() + 1LL);              // 文本对齐的生产数据中（我们有的输入文件长达1MB）直接分n * 2会爆内存，这里先分n的内存
+    b_index_arr.reserve(A.size() << 2);
+    prv_arr.reserve(A.size() << 2);
     cerr << "A:" << A.size() << " B:" << B.size() << " adj:" << adj.size() << "\n";
-    for (i = 0; i < A.size(); i++)
+    for (i = 0LL; i < A.size(); i++)
     {
-        for (j = adj[A[i]].size() - 1; j >= 0; j--) // 对于英文字符来说，这种方法不一定很优，因为每个adj的桶里的内容都很多，但是对于中文字符来说这种做法很可能很快，常用的文字有3500个，相当于有3500个桶来匀全文的匹配
+        for (j = adj[A[i]].size() - 1LL; j >= 0LL; j--) // 对于英文字符来说，这种方法不一定很优，因为每个adj的桶里的内容都很多，但是对于中文字符来说这种做法很可能很快，常用的文字有3500个，相当于有3500个桶来匀全文的匹配
         {
             auto x = adj[A[i]][j];
             if (x > thresh.back())
             {
                 thresh.emplace_back(x);
                 // 放入listnode
-                linklistnode.emplace_back(x, link.back());
-                link.emplace_back(linklistnode.size() - 1);
+                // linklistnode.emplace_back(x, link.back());
+                b_index_arr.emplace_back(x);
+                prv_arr.emplace_back(link.back());
+                link.emplace_back(prv_arr.size() - 1LL);
             }
             else
             {
                 auto insert_pos = lower_bound(thresh.begin(), thresh.end(), x) - thresh.begin(); // thresh虽然冗余但是去掉会需要写比较tricky的lambda，影响性能
                 thresh[insert_pos] = x;                                                          // 最坏情况出现在A串和B串都由同一个字符构造而来，这种情况是n*m*log(n)的时间，但是在我们的数据上不可能发生
 
-                linklistnode.emplace_back(x, link[insert_pos - 1]);
-                link[insert_pos] = linklistnode.size() - 1;
+                // linklistnode.emplace_back(x, link[insert_pos - 1LL]);
+                b_index_arr.emplace_back(x);
+                prv_arr.emplace_back(link[insert_pos - 1LL]);
+                link[insert_pos] = prv_arr.size() - 1LL;
             }
         }
     }
-    if (linklistnode.size() > 4294967295ULL)
+    // 7479282315
+    if (prv_arr.size() > 4294967295ULL)
         cerr << "[WARNING EXCEED UNSIGNED INT ?????]";
-    else if (linklistnode.size() > 2147483647ULL)
+    else if (prv_arr.size() > 2147483647ULL)
         cerr << "[WARNING EXCEED INT !!!!!]";
-    cerr << "A:" << A.size() << " B:" << B.size() << " LLN:" << linklistnode.size() << " LLNS:" << linklistnode.capacity() << "\n";
+    cerr << "A:" << A.size() << " B:" << B.size() << " LLN:" << prv_arr.size() << " LLNS:" << prv_arr.capacity() << "\n";
     // 我们复用thresh数组的空间来输出
     thresh.assign(A.size(), -1);
     thresh.resize(A.size());
@@ -147,12 +162,12 @@ vector<ll> lcs_isequence_idx(const vector<ui> &A, const vector<ui> &B)
     j = link.back();
     for (i = A.size() - 1; i >= 0; --i)
     {
-        if (linklistnode[j].prv < 0)
+        if (prv_arr[j] < 0)
             break;
-        if (A[i] == B[linklistnode[j].b_index])
+        if (A[i] == B[b_index_arr[j]])
         {
-            thresh[i] = linklistnode[j].b_index;
-            j = linklistnode[j].prv;
+            thresh[i] = b_index_arr[j];
+            j = prv_arr[j];
         }
     }
     return thresh;
