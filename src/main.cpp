@@ -88,8 +88,6 @@ int lcs_sequence_length(const string &str1, const string &str2)
 // 我们用到的核心代码，我只优化这个
 vector<ll> lcs_isequence_idx(const vector<ui> &A, const vector<ui> &B)
 {
-    // The key of the map should match the type of elements in the vector.
-    unordered_map<ui, vector<ll>> adj; // 均摊O(B.size())，当然实际可能会大一点但是绝对不会达到A*B
     ll i, j;
     if (B.size() > UINT_FAST32_MAX)
     {
@@ -98,54 +96,42 @@ vector<ll> lcs_isequence_idx(const vector<ui> &A, const vector<ui> &B)
     }
     if (B.size() == 0LL || A.size() == 0LL)
         return vector<ll>(A.size(), -1LL);
-
-    for (i = 0LL; i < B.size(); i++)
-        adj[B[i]].push_back(i); // adj就是论文中的MATCHLIST，这里是升序放进去，我们之后倒序遍历来实现降序访问
-
-    vector<ll> thresh{-1LL};       // 论文中的THRESH数组
-    thresh.reserve(A.size() + 1LL); // 放入虚点，避免傻逼讨论
-    // 实现自论文https://cse.hkust.edu.hk/mjg_lib/bibs/DPSu/DPSu.Files/HuSz77.pdf，用两个vector来实现单前向节点链表
-    vector<ll> link{0LL}; // 记前向node号，和thresh数组等长
+    vector<ll> thresh{-1LL};
+    thresh.reserve(A.size() + 1LL);
+    vector<ll> link{0LL};
     link.reserve(A.size() + 1LL);
-
-    // struct listnode
-    // {
-    //     ll b_index;
-    //     ll prv; // 指向linklistnode中上一个元素的下标，考虑到指针会大一倍，这里不用指针
-    //     listnode(ll a, ll b) : b_index(a), prv(b) {}
-    // };
-    // listnode Aos 改成 SoA
     vector<ui> b_index_arr{UINT_FAST32_MAX};
     vector<ll> prv_arr{-1LL};
-    // TODO: use UINT_FAST32_MAX
-    // vector<listnode> linklistnode{listnode{-1, -1}}; // 这个是节点内容，长度等于A和B中元素的匹配数，也就是说最坏还是n^2的，但实际数据远远达不到
-    // linklistnode.reserve(A.size() + 1LL);              // 文本对齐的生产数据中（我们有的输入文件长达1MB）直接分n * 2会爆内存，这里先分n的内存
-    b_index_arr.reserve(A.size() << 2);
-    prv_arr.reserve(A.size() << 2);
-    cerr << "A:" << A.size() << " B:" << B.size() << " adj:" << adj.size() << "\n";
-    for (i = 0LL; i < A.size(); i++)
+    size_t maxadj = 0;
     {
-        for (j = adj[A[i]].size() - 1LL; j >= 0LL; j--) // 对于英文字符来说，这种方法不一定很优，因为每个adj的桶里的内容都很多，但是对于中文字符来说这种做法很可能很快，常用的文字有3500个，相当于有3500个桶来匀全文的匹配
+        unordered_map<ui, vector<ui>> adj;
+        for (i = 0LL; i < B.size(); ++i)
+            adj[B[i]].push_back(i);
+        b_index_arr.reserve(A.size() * A.size() / adj.size());
+        prv_arr.reserve(A.size() * A.size() / adj.size());
+        for (auto [k, v] : adj)
+            maxadj = max(maxadj, v.size());
+        cerr << "A:" << A.size() << " B:" << B.size() << " adj:" << adj.size() << " maxadj:" << maxadj << "\n";
+        for (i = 0LL; i < A.size(); ++i)
         {
-            auto x = adj[A[i]][j];
-            if (x > thresh.back())
+            for (j = adj[A[i]].size() - 1LL; j >= 0LL; --j)
             {
-                thresh.emplace_back(x);
-                // 放入listnode
-                // linklistnode.emplace_back(x, link.back());
-                b_index_arr.emplace_back(x);
-                prv_arr.emplace_back(link.back());
-                link.emplace_back(prv_arr.size() - 1LL);
-            }
-            else
-            {
-                auto insert_pos = lower_bound(thresh.begin(), thresh.end(), x) - thresh.begin(); // thresh虽然冗余但是去掉会需要写比较tricky的lambda，影响性能
-                thresh[insert_pos] = x;                                                          // 最坏情况出现在A串和B串都由同一个字符构造而来，这种情况是n*m*log(n)的时间，但是在我们的数据上不可能发生
-
-                // linklistnode.emplace_back(x, link[insert_pos - 1LL]);
-                b_index_arr.emplace_back(x);
-                prv_arr.emplace_back(link[insert_pos - 1LL]);
-                link[insert_pos] = prv_arr.size() - 1LL;
+                auto x = adj[A[i]][j];
+                if (x > thresh.back())
+                {
+                    thresh.emplace_back(x);
+                    b_index_arr.emplace_back(x);
+                    prv_arr.emplace_back(link.back());
+                    link.emplace_back(prv_arr.size() - 1LL);
+                }
+                else
+                {
+                    auto insert_pos = lower_bound(thresh.begin(), thresh.end(), x) - thresh.begin();
+                    thresh[insert_pos] = x;
+                    b_index_arr.emplace_back(x);
+                    prv_arr.emplace_back(link[insert_pos - 1LL]);
+                    link[insert_pos] = prv_arr.size() - 1LL;
+                }
             }
         }
     }
@@ -154,8 +140,7 @@ vector<ll> lcs_isequence_idx(const vector<ui> &A, const vector<ui> &B)
         cerr << "[WARNING EXCEED UNSIGNED INT ?????]";
     else if (prv_arr.size() > 2147483647ULL)
         cerr << "[WARNING EXCEED INT !!!!!]";
-    cerr << "A:" << A.size() << " B:" << B.size() << " LLN:" << prv_arr.size() << " LLNS:" << prv_arr.capacity() << "\n";
-    // 我们复用thresh数组的空间来输出
+    cerr << "A:" << A.size() << " B:" << B.size() << " maxadj:" << maxadj << " LLN:" << prv_arr.size() << " LLNS:" << prv_arr.capacity() << "\n";
     thresh.assign(A.size(), -1);
     thresh.resize(A.size());
 
@@ -173,7 +158,6 @@ vector<ll> lcs_isequence_idx(const vector<ui> &A, const vector<ui> &B)
     return thresh;
 }
 
-// 我们用到的核心代码，我只优化这个
 vector<ll> lcs_sequence_idx(const string &str, const string &ref)
 {
     /***
@@ -534,7 +518,7 @@ PYBIND11_MODULE(pylcs, m)
     m.def("lcs_sequence_idx", &lcs_sequence_idx, R"pbdoc(Longest common subsequence indices mapping from str to ref)pbdoc",
           py::arg("s"), py::arg("ref"));
     m.def("lcs_isequence_idx", &lcs_isequence_idx, R"pbdoc(Longest common subsequence indices mapping for integer sequences)pbdoc",
-        py::arg("seq1"), py::arg("seq2"));
+          py::arg("seq1"), py::arg("seq2"));
     m.def("lcs_of_list", &lcs_sequence_of_list, R"pbdoc(Longest common subsequence of list)pbdoc");
     m.def("lcs_sequence_of_list", &lcs_sequence_of_list, R"pbdoc(Longest common subsequence of list)pbdoc");
 

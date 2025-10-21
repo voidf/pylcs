@@ -52,7 +52,11 @@ def cpp_flag(compiler):
     """Return the -std=c++[11/14] compiler flag.
     The c++14 is prefered over c++11 (when it is available).
     """
-    if has_flag(compiler, '-std=c++14'):
+    if has_flag(compiler, '-std=c++20'):
+        return '-std=c++20'
+    elif has_flag(compiler, '-std=c++17'):
+        return '-std=c++17'
+    elif has_flag(compiler, '-std=c++14'):
         return '-std=c++14'
     elif has_flag(compiler, '-std=c++11'):
         return '-std=c++11'
@@ -83,6 +87,7 @@ class BuildExt(build_ext):
         elif ct == 'msvc':
             opts.append('/DVERSION_INFO=\\"%s\\"' % self.distribution.get_version())
             opts.append('/O2')
+            opts.append('/std:c++20')
         for ext in self.extensions:
             ext.extra_compile_args = opts
         build_ext.build_extensions(self)
@@ -93,10 +98,10 @@ with open("README.md", "r") as fh:
 setup(
     name='pylcs',
     version='0.0.9',
-    author='kuangzh',
-    author_email='kuangzh@smail.nju.edu.cn',
-    url='https://github.com/kuangkzh/pylcs',
-    description='super fast cpp implementation of longest common subsequence',
+    author='voidf',
+    author_email='510030805voidf@gmail.com',
+    url='https://github.com/voidf/pylcs',
+    description='Hunt-Szymanski Algorithm for longest common subsequence',
     long_description=long_description,
     long_description_content_type="text/markdown",
     ext_modules=ext_modules,
