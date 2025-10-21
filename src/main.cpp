@@ -107,10 +107,10 @@ vector<ll> lcs_isequence_idx(const vector<ui> &A, const vector<ui> &B)
         unordered_map<ui, vector<ui>> adj;
         for (i = 0LL; i < B.size(); ++i)
             adj[B[i]].push_back(i);
-        b_index_arr.reserve(A.size() * A.size() / adj.size());
-        prv_arr.reserve(A.size() * A.size() / adj.size());
         for (auto [k, v] : adj)
             maxadj = max(maxadj, v.size());
+        b_index_arr.reserve(A.size() * maxadj);
+        prv_arr.reserve(A.size() * maxadj);
         cerr << "A:" << A.size() << " B:" << B.size() << " adj:" << adj.size() << " maxadj:" << maxadj << "\n";
         for (i = 0LL; i < A.size(); ++i)
         {
@@ -505,7 +505,7 @@ vector<int> levenshtein_distance_of_list(const string &str1, vector<string> &str
 // {
 //     // vector<int>ls = lcs_sequence_idx("ABC123IJKL#O#TUVWXY", "ABCdefghIjkLmnOpqrsTUvWxY");
 //     // vector<int> ls = lcs_sequence_idx("srcyeelxduw", "qxbdrytadpu");
-//     vector<int> ls = lcs_sequence_idx("yzv", "vzu");
+//     vector<ll> ls = lcs_sequence_idx("yzv", "vzu");
 // #include <iostream>
 //     std::cout << ls.size();
 // }
