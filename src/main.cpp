@@ -88,73 +88,92 @@ int lcs_sequence_length(const string &str1, const string &str2)
 // 我们用到的核心代码，我只优化这个
 vector<ll> lcs_isequence_idx(const vector<ui> &A, const vector<ui> &B)
 {
-    ll i, j;
     if (B.size() > UINT_FAST32_MAX)
     {
         cerr << "[ERROR!] DETECT B SIZE LARGER THAN " << UINT_FAST32_MAX << " :" << B.size() << "\n";
         exit(1);
     }
-    if (B.size() == 0LL || A.size() == 0LL)
-        return vector<ll>(A.size(), -1LL);
+    if (B.size() == 0 || A.size() == 0)
+        return vector<ll>(A.size(), -1);
     vector<ll> thresh{-1LL};
-    thresh.reserve(A.size() + 1LL);
+    thresh.reserve(A.size() + 1);
     vector<ll> link{0LL};
-    link.reserve(A.size() + 1LL);
+    link.reserve(A.size() + 1);
     vector<ui> b_index_arr{UINT_FAST32_MAX};
-    vector<ll> prv_arr{-1LL};
-    size_t maxadj = 0;
+    // vector<ll> prv_arr{-1};
+    ui *b_idx_arr;
+    size_t b_idx_len = 1;
+    ll *prv_arr;
+    size_t prv_arr_len = 1;
+    // size_t maxadj = 0;
+    size_t overall_size = 1; // 多留一位
     {
         unordered_map<ui, vector<ui>> adj;
-        for (i = 0LL; i < B.size(); ++i)
+        for (size_t i = 0; i < B.size(); ++i)
             adj[B[i]].push_back(i);
-        for (auto [k, v] : adj)
-            maxadj = max(maxadj, v.size());
-        b_index_arr.reserve(A.size() * maxadj);
-        prv_arr.reserve(A.size() * maxadj);
-        cerr << "A:" << A.size() << " B:" << B.size() << " adj:" << adj.size() << " maxadj:" << maxadj << "\n";
-        for (i = 0LL; i < A.size(); ++i)
+        for (auto a : A)
+            if (adj.count(a))
+                overall_size += adj[a].size();
+        // for (auto [k, v] : adj)
+        // maxadj = max(maxadj, v.size());
+        // b_index_arr.reserve(A.size() * maxadj);
+        // prv_arr.reserve(A.size() * maxadj);
+        cerr << "A:" << A.size() << " B:" << B.size() << " adj:" << adj.size() << " overall_size:" << overall_size << "\n";
+        b_idx_arr = new ui[overall_size];
+        b_idx_arr[0] = UINT_FAST32_MAX;
+        prv_arr = new ll[overall_size];
+        prv_arr[0] = -1LL;
+
+        for (auto a : A)
         {
-            for (j = adj[A[i]].size() - 1LL; j >= 0LL; --j)
-            {
-                auto x = adj[A[i]][j];
-                if (x > thresh.back())
+            if (adj.count(a))
+                for (ll j = adj[a].size() - 1; j >= 0; --j)
                 {
-                    thresh.emplace_back(x);
-                    b_index_arr.emplace_back(x);
-                    prv_arr.emplace_back(link.back());
-                    link.emplace_back(prv_arr.size() - 1LL);
+                    auto x = adj[a][j];
+                    if (x > thresh.back())
+                    {
+                        thresh.emplace_back(x);
+                        b_idx_arr[b_idx_len++] = x;
+                        // b_index_arr.emplace_back(x);
+                        prv_arr[prv_arr_len++] = link.back();
+                        // prv_arr.emplace_back(link.back());
+                        link.emplace_back(prv_arr_len - 1);
+                    }
+                    else
+                    {
+                        auto insert_pos = lower_bound(thresh.begin(), thresh.end(), x) - thresh.begin();
+                        thresh[insert_pos] = x;
+                        b_idx_arr[b_idx_len++] = x;
+                        // b_index_arr.emplace_back(x);
+                        prv_arr[prv_arr_len++] = link[insert_pos - 1];
+                        // prv_arr.emplace_back(link[insert_pos - 1]);
+                        link[insert_pos] = prv_arr_len - 1;
+                    }
                 }
-                else
-                {
-                    auto insert_pos = lower_bound(thresh.begin(), thresh.end(), x) - thresh.begin();
-                    thresh[insert_pos] = x;
-                    b_index_arr.emplace_back(x);
-                    prv_arr.emplace_back(link[insert_pos - 1LL]);
-                    link[insert_pos] = prv_arr.size() - 1LL;
-                }
-            }
         }
     }
     // 7479282315
-    if (prv_arr.size() > 4294967295ULL)
+    if (prv_arr_len > 4294967295ULL)
         cerr << "[WARNING EXCEED UNSIGNED INT ?????]";
-    else if (prv_arr.size() > 2147483647ULL)
+    else if (prv_arr_len > 2147483647ULL)
         cerr << "[WARNING EXCEED INT !!!!!]";
-    cerr << "A:" << A.size() << " B:" << B.size() << " maxadj:" << maxadj << " LLN:" << prv_arr.size() << " LLNS:" << prv_arr.capacity() << "\n";
+    cerr << "A:" << A.size() << " B:" << B.size() << " overall_size:" << overall_size << " LLN:" << prv_arr_len << " LLNS:" << overall_size << "\n";
     thresh.assign(A.size(), -1);
     thresh.resize(A.size());
 
-    j = link.back();
-    for (i = A.size() - 1; i >= 0; --i)
+    ll j = link.back();
+    for (ll i = A.size() - 1; i >= 0; --i)
     {
         if (prv_arr[j] < 0)
             break;
-        if (A[i] == B[b_index_arr[j]])
+        if (A[i] == B[b_idx_arr[j]])
         {
-            thresh[i] = b_index_arr[j];
+            thresh[i] = b_idx_arr[j];
             j = prv_arr[j];
         }
     }
+    delete[] b_idx_arr;
+    delete[] prv_arr;
     return thresh;
 }
 
